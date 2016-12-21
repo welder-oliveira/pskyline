@@ -9,14 +9,14 @@ and OUTPUTs the p-skyline subset R from S, i.e. the set of all points in S
 with a Pareto efficience probability at least equal to p
 
 ## Arguments
-### mandatory
+_mandatory_
 tab: a data.frame with each line representing a candidate to be evaluated by pSkyline
 latCol: column number for the latitudes of the spatial
 lonCol: column number for the longitudes of the spatial
 meanError: the mean error in METERS in the coordinates
 sdError: the standard error in METERS in the coordinates
 
-### recommended but not mandatory 
+_recommended but not mandatory_
 p:      the threshold probability required for a spatial data object to be in the 
         skyline. By default 0.5
 refLat, refLon: arrays of reference coordinates of points from which the distance of 
@@ -34,6 +34,6 @@ values are stored in the derived columns. THOSE derived values are used after to
 compute the spatial p-skyline under the criterium of minimization. Thus the goal is 
 to find those spatial points which are the nearest ones with respect to the 
 references points.
-----------
+
 The pdf options are: "normal" (default), "exponencial" and "chisquare". These 
 names also may be provides as "norm", "expo", "exp" and "chisq".
