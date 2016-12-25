@@ -36,6 +36,8 @@ with a Pareto efficience probability at least equal to p
          
 **pdfSpatial**: pdf option for error in the coordinates (default = "normal")
 
+**manhattan**: TRUE if Manhattan distance should be applied. FALSE by default.
+
 ## Details
 The algorithm proceeds by computing the 
 distances of each spatial object i to each reference point and these 
@@ -48,6 +50,11 @@ The pdf options are: "normal" (default), "exponencial" and "chisquare". These
 names also may be provides as "norm", "expo", "exp" and "chisq".
 
 ## Example
-pSkyline(tab, latCol, lonCol, meanError = 100, sdError = 1000, p = 0.50, 
+source(paste("/home/welder/Documentos/projetos/pskyline", "pSkyline.R", sep = "/"))
+
+pathSchool = paste(localPskylineFolder, "sampleData_36gynSchools", sep = "/")
+tab = read.csv2(pathSchool)
+
+pSkyline(tab, latCol = 2, lonCol = 3, meanError = 100, sdError = 1000, p = 0.50, 
          refLat = c(-16.68, -16.71, -16.695), refLon = c(-49.21, -49.275, -49.35), degreeNotation = TRUE, 
-         pdfSpatial = "normal")
+         pdfSpatial = "normal", manhattan = TRUE)

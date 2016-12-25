@@ -5,11 +5,9 @@ localPskylineFolder = "/home/welder/Documentos/projetos/pskyline"
 source(paste(localPskylineFolder, "sphericalDistance.R", sep = "/"))
 
 
-
-
 pSkyline <- function (tab, latCol, lonCol, meanError, sdError, p = 0.5, 
                       refLat = NULL, refLon = NULL, degreeNotation = TRUE, 
-                      pdfSpatial = "normal") {
+                      pdfSpatial = "normal", manhattan = FALSE) {
   # Default of reference point
   if (is.null(refLat)) {
     refLat = tab[1, latCol]
@@ -29,7 +27,7 @@ pSkyline <- function (tab, latCol, lonCol, meanError, sdError, p = 0.5,
       probBeDominatedByThis[j] = 
         probDominance(pointEvaluated = list(lat = tab[i, latCol], lon = tab[i, lonCol]), 
                       concurrent = list(lat = tab[j, latCol], lon = tab[j, lonCol]), 
-                      refLat, refLon, meanError, sdError, pdfSpatial)
+                      refLat, refLon, meanError, sdError, pdfSpatial, manhattan)
     }
     # compute the prob of being Pareto efficient
     probParetoEfficient[i] = prod(1 - probBeDominatedByThis[-i])
@@ -73,17 +71,15 @@ deriveDistFromRefPoints <- function (tab, latCol, lonCol, refLat = NULL, refLon 
 }
 
 probDominance <- function(pointEvaluated, concurrent, refLat, refLon, 
-                          meanError, sdError, pdfSpatial) {
+                          meanError, sdError, pdfSpatial, manhattan) {
   # simulating real positions for 'pointEvaluated' and 'concurrent' points
   simulatedDistFromEvaluatedToRefPoint = simulateDistToRefPoint(pointEvaluated, n = 20,
                                                             refLat, refLon, meanError, 
-                                                            sdError, pdfSpatial)
+                                                            sdError, pdfSpatial, manhattan)
   simulatedDistFromConcurrentToRefPoint = simulateDistToRefPoint(concurrent, n = 20, 
                                                             refLat, refLon, meanError, 
-                                                            sdError, pdfSpatial)
+                                                            sdError, pdfSpatial, manhattan)
   
-  # prob = mean(simulatedDistFromConcurrentToRefPoint <  # até o dia 20/12
-  #               simulatedDistFromEvaluatedToRefPoint)
   prob = 1
   for (j in 1:length(refLat)) {
     prob = prob * mean(simulatedDistFromConcurrentToRefPoint[, j] <  
@@ -97,28 +93,64 @@ probSkyline <- function(u, S) {
 }
 
 simulateDistToRefPoint <- function(databasePoint, n = 20, refLat, refLon, meanError, 
-                               sdError, distribution = "normal") {
+                               sdError, distribution = "normal", manhattan = FALSE) {
+  if (missing(manhattan))
+    manhattan = FALSE
   
   # simulating the size of the positional error
-  if (distribution %in% c("normal", "norm", "n"))
-    sizePositionalError = rnorm(n, mean = meanError, sd = sdError)
-  if (distribution %in% c("exponencial", "expo", "exp", "e"))
-    sizePositionalError = rexp(n, rate = 1 / meanError)
-  if (distribution %in% c("chisquare", "chisq", "c"))
-    sizePositionalError = rchisq(n, df = meanError)
+  if (manhattan == TRUE) {
+    # a factor to guarantee that if applied equally in both coordinates, 
+    # the euclidian will remain being distributed with a mean given
+    # by meanError.
+    manhattanCorrectionFactor = sqrt(2) / 2
+    if (distribution %in% c("normal", "norm", "n")) {
+      sizePositionalErrorLat = rnorm(n, mean = manhattanCorrectionFactor*meanError, 
+                                  sd = sdError)
+      sizePositionalErrorLon = rnorm(n, mean = manhattanCorrectionFactor*meanError, 
+                                   sd = sdError)
+    }
+    if (distribution %in% c("exponencial", "expo", "exp", "e")){
+      sizePositionalErrorLat = rexp(n, rate = 1 / (manhattanCorrectionFactor*meanError))
+      sizePositionalErrorLon = rexp(n, rate = 1 / (manhattanCorrectionFactor*meanError))
+    }
+    if (distribution %in% c("chisquare", "chisq", "c")) {
+      sizePositionalErrorLat = rchisq(n, df = manhattanCorrectionFactor*meanError)
+      sizePositionalErrorLon = rchisq(n, df = manhattanCorrectionFactor*meanError)
+    }
+    
+    directionErrorLat = (-1)^rbinom(n, size = 1, prob = 0.5)
+    directionErrorLon = (-1)^rbinom(n, size = 1, prob = 0.5)
+    new_lat = databasePoint$lat + directionErrorLat * metersToDegrees(sizePositionalErrorLat)
+    new_lon = databasePoint$lon + directionErrorLon * metersToDegrees(sizePositionalErrorLon)
+    
+  } else {
+    if (distribution %in% c("normal", "norm", "n"))
+      sizePositionalError = rnorm(n, mean = meanError, sd = sdError)
+    if (distribution %in% c("exponencial", "expo", "exp", "e"))
+      sizePositionalError = rexp(n, rate = 1 / meanError)
+    if (distribution %in% c("chisquare", "chisq", "c"))
+      sizePositionalError = rchisq(n, df = meanError)
+    
+    angle = runif(n, 0, 2*pi)
+    errorInLon = sizePositionalError * cos(angle)
+    errorInLat = sizePositionalError * sin(angle)
+    new_lat = databasePoint$lat + metersToDegrees(errorInLat)
+    new_lon = databasePoint$lon + metersToDegrees(errorInLon)
+  }
   
-  angle = runif(n, 0, 2*pi)
-  errorInLon = sizePositionalError * cos(angle)
-  errorInLat = sizePositionalError * sin(angle)
-  new_lat = databasePoint$lat + metersToDegrees(errorInLat)
-  new_lon = databasePoint$lon + metersToDegrees(errorInLon)
+
   
   # distances = numeric(n) # até o dia 20/12
   distances = matrix(0, n, length(refLat))
   for (i in 1:n) {
     for (j in 1:length(refLat)) {
-      # distances[i] = sphericalDist(new_lat[i], new_lon[i], refLat, refLon) # até o dia 20/12
-      distances[i, j] = sphericalDist(new_lat[i], new_lon[i], refLat[j], refLon[j])
+      if (manhattan) {
+        distances[i, j] = sphericalDist(new_lat[i], new_lon[i], refLat[j], new_lon[i]) + 
+          sphericalDist(refLat[j], new_lon[i], refLat[j], refLon[j])
+        
+      } else {
+        distances[i, j] = sphericalDist(new_lat[i], new_lon[i], refLat[j], refLon[j]) 
+      }
     }
   }
   return (distances)
@@ -128,23 +160,3 @@ metersToDegrees <- function(x) {
   # consider that each degree possess 111.111 km
   return(x/111111)
 }
-
-# Example
-pathSchool = paste(localPskylineFolder, "sampleData_36gynSchools", sep = "/")
-tab = read.csv2(pathSchool)
-latCol = 2
-lonCol = 3
-refLat = c(tab[1, 2], tab[2, 2])
-refLon = c(tab[1, 3], tab[2, 3])
-refLat = refLon = NULL
-degreeNotation = TRUE
-p = 0.5
-
-meanError = 60
-sdError = 10
-pdfSpatial = "normal"
-
-
-pSkyline(tab, latCol, lonCol, meanError = 100, sdError = 1000, p = 0.50, 
-         refLat = c(-16.68, -16.71, -16.695), refLon = c(-49.21, -49.275, -49.35), degreeNotation = TRUE, 
-         pdfSpatial = "normal")
