@@ -8,7 +8,7 @@ of every point which will be in the final solution;
 and OUTPUTs the p-skyline subset R from S, i.e. the set of all points in S
 with a Pareto efficience probability at least equal to p
 
-## Dependences
+## Dependencies
 R (≥ 2.15)
 
 Package 'oce' (open _**R**_, digite _install.packages("oce")_ and press ENTER to install this package)
