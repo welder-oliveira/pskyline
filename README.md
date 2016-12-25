@@ -8,6 +8,11 @@ of every point which will be in the final solution;
 and OUTPUTs the p-skyline subset R from S, i.e. the set of all points in S
 with a Pareto efficience probability at least equal to p
 
+## Dependences
+R (≥ 2.15)
+
+Package 'oce' (open _**R**_, digite _install.packages("oce")_ and press ENTER to install this package)
+
 ## Arguments
 --- mandatory ---
 
@@ -55,8 +60,15 @@ Insert your computer path to the pskyline project below.
 source(paste("/home/welder/Documentos/projetos/pskyline", "pSkyline.R", sep = "/"))
 
 pathSchool = paste(localPskylineFolder, "sampleData_36gynSchools", sep = "/")
+
 tab = read.csv2(pathSchool)
+
+start_time = Sys.time()
 
 pSkyline(tab, latCol = 2, lonCol = 3, meanError = 100, sdError = 1000, p = 0.50, 
          refLat = c(-16.68, -16.71, -16.695), refLon = c(-49.21, -49.275, -49.35), degreeNotation = TRUE, 
-         pdfSpatial = "normal", manhattan = TRUE)
+         pdfSpatial = "normal", manhattan = FALSE)
+         
+end_time = Sys.time()
+
+cat("\nTime spent by the program: "); cat(end_time - start_time)
