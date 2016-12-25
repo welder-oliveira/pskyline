@@ -50,6 +50,8 @@ The pdf options are: "normal" (default), "exponencial" and "chisquare". These
 names also may be provides as "norm", "expo", "exp" and "chisq".
 
 ## Example
+Insert your computer path to the pskyline project below.
+
 source(paste("/home/welder/Documentos/projetos/pskyline", "pSkyline.R", sep = "/"))
 
 pathSchool = paste(localPskylineFolder, "sampleData_36gynSchools", sep = "/")
