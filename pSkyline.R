@@ -17,11 +17,27 @@ pSkyline <- function (tab, latCol, lonCol, meanError, sdError, p = 0.5,
   # Cast coordinates to numeric
   tab[, latCol] = as.numeric(as.character((tab[, latCol])))
   tab[, lonCol] = as.numeric(as.character((tab[, lonCol])))
-  
-  P = c()   # set of Pareto efficient points 
-  countOfParetoEfficientPoints = 0
+
+  # Compute the database distances
+  distances = matrix(0, nrow(tab), length(refLat))
+  for (i in 1:nrow(tab)) {
+    for (j in 1:length(refLat)) {
+      distances[i, j] = sphericalDist(lat1 = tab[i, latCol], long1 = tab[i, lonCol], refLat[j], refLon[j])
+    }
+  }
+    
+  P = notP = c()   # set of Pareto efficient points 
+  countOfParetoEfficientPoints = countOfNonParetoEfficientPoints  = 0
   probParetoEfficient = numeric(nrow(tab))
   for (i in 1:nrow(tab)) {
+    # verify whether this point may be decided to be Pareto efficient without simulations
+    if (!is.null(P) && i %in% P) {
+      next()
+    }
+    if (!is.null(notP) && i %in% notP) {
+      next()
+    }
+          
     probBeDominatedByThis = numeric(nrow(tab)) # ignore position i (It is itself)
     for (j in (1:nrow(tab))) {
       probBeDominatedByThis[j] = 
@@ -35,10 +51,27 @@ pSkyline <- function (tab, latCol, lonCol, meanError, sdError, p = 0.5,
     if (probParetoEfficient[i] >= p) {
       countOfParetoEfficientPoints = countOfParetoEfficientPoints + 1
       P[countOfParetoEfficientPoints] = i
+      
+      # get more pSkyline points without running simulations
+      dominateThis = which(apply(X = distances, MARGIN = 1, FUN = function(x) prod(x < distances[i, ])) == 1)
+      if (length(dominateThis) != 0) {
+        P[(countOfParetoEfficientPoints + 1):(countOfParetoEfficientPoints + length(dominateThis))] = dominateThis
+        countOfParetoEfficientPoints = countOfParetoEfficientPoints + length(dominateThis)
+      }
+    } else {
+      countOfNonParetoEfficientPoints = countOfNonParetoEfficientPoints + 1
+      notP[countOfNonParetoEfficientPoints] = i
+      
+      # get more non pSkyline points without running simulations
+      dominatedByThis = which(apply(X = distances, MARGIN = 1, FUN = function(x) prod(x > distances[i, ])) == 1)
+      if (length(dominatedByThis) != 0) {
+        notP[(countOfNonParetoEfficientPoints + 1):(countOfNonParetoEfficientPoints + length(dominatedByThis))] = dominatedByThis
+        countOfNonParetoEfficientPoints = countOfNonParetoEfficientPoints + length(dominatedByThis)
+      }
     }
   }
   
-  cat("Sorted skyline probabities: "); 
+  cat("\nSorted skyline probabities: "); 
   cat(sort(probParetoEfficient[probParetoEfficient >= p], decreasing = T)); cat("\n")
   
   # Ploting pskylines points
